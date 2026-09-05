@@ -1,20 +1,12 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
-
+from app.db.dependencies import get_db
+from app.db.models import Document, DocumentChunk
+from app.services.chunking_service import chunk_text
+from app.services.embedding_service import generate_embeddings
 from app.services.pdf_service import save_pdf, extract_text
 
-from app.services.chunking_service import chunk_text
-
-from app.services.embedding_service import generate_embeddings
-
-from app.db.dependencies import get_db
-
-from app.db.models import Document, DocumentChunk
-
-
 router = APIRouter()
-
 
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_db)):

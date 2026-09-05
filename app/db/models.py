@@ -1,15 +1,10 @@
 import uuid
-
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, Text, Integer, DateTime, ForeignKey
-
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
-from pgvector.sqlalchemy import Vector
-
 from app.db.database import Base
-
 
 class Document(Base):
 

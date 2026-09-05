@@ -6,13 +6,13 @@ from app.services.embedding_service import generate_embedding
 
 def search_chunks(db: Session, query: str, top_k: int = 5):
 
-    # Convert question into vector
     query_embedding = generate_embedding(query)
 
-    # Search database
+    distance = DocumentChunk.embedding.cosine_distance(query_embedding)
+
     results = (
-        db.query(DocumentChunk)
-        .order_by(DocumentChunk.embedding.cosine_distance(query_embedding))
+        db.query(DocumentChunk, distance.label("distance"))
+        .order_by(distance)
         .limit(top_k)
         .all()
     )
