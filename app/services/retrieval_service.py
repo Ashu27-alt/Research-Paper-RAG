@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 
 from app.db.models import DocumentChunk
 from app.services.embedding_service import generate_embedding
@@ -12,6 +12,7 @@ def search_chunks(db: Session, query: str, top_k: int = 5):
 
     results = (
         db.query(DocumentChunk, distance.label("distance"))
+        .options(joinedload(DocumentChunk.document))
         .order_by(distance)
         .limit(top_k)
         .all()
