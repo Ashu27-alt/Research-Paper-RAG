@@ -9,16 +9,14 @@ router = APIRouter()
 
 
 @router.get("/ask")
-def ask_question(
-    question: str,
-    top_k: int = 5,
-    db: Session = Depends(get_db)
-):
+def ask_question( question: str, top_k: int = 5, max_distance: float = 0.30, document_id: str | None = None, db: Session = Depends(get_db) ):
 
     result = answer_question(
         db=db,
         question=question,
-        top_k=top_k
+        top_k=top_k,
+        max_distance=max_distance,
+        document_id=document_id
     )
 
     return {
