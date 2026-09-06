@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.services.retrieval_service import search_chunks
 from app.services.llm_service import generate_answer
-from app.services.reranking_service import rerank_chunks
+from app.services.reranking_service import reranker_service
 
 
 def answer_question(
@@ -28,9 +28,9 @@ def answer_question(
     # 2. Rerank candidates
     # -------------------------
 
-    results = rerank_chunks(
-        question=question,
-        chunks=retrieved,
+    results = reranker_service.rerank(
+        query=question,
+        results=retrieved,
         top_k=top_k,
     )
 
@@ -58,7 +58,10 @@ def answer_question(
 
         context_parts.append(
             f"""
-                [SOURCE {index} | {chunk.document.filename} | Page {chunk.page_number}]
+                [SOURCE {index}]
+                Document: {chunk.document.filename}
+                Page: {chunk.page_number}
+                Chunk ID: {chunk.id}
                 {chunk.text}
             """
         )
@@ -83,8 +86,8 @@ def answer_question(
     for index, result in enumerate(results, start=1):
 
         chunk = result["chunk"]
-        distance = result["distance"]
-        score = result["score"]
+
+        score = result["rerank_score"]
 
         sources.append(
             {
@@ -93,7 +96,6 @@ def answer_question(
                 "filename": chunk.document.filename,
                 "chunk_id": chunk.id,
                 "page_number": chunk.page_number,
-                "distance": float(distance),
                 "reranker_score": float(score),
             }
         )

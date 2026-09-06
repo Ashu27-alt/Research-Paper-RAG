@@ -1,4 +1,4 @@
-from services.chunking_service import chunk_text
+from app.services.chunking_service import chunk_pages
 
 
 text = """
@@ -18,11 +18,15 @@ Those chunks are then provided to a language model.
 """
 
 
-chunks = chunk_text(
-    text=text,
-    page_number=1,
+chunks = chunk_pages(
+    pages=[
+        {
+            "page_number": 1,
+            "blocks": [{"text": text, "type": "text"}],
+        }
+    ],
     chunk_size=30,
-    overlap=10
+    overlap=10,
 )
 
 

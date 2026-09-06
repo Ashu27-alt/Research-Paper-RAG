@@ -1,77 +1,77 @@
 [
   {
     "question": "What is the main idea behind Masked Autoencoders (MAE)?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [132, 137]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [1, 5, 6]
   },
   {
     "question": "How does MAE reconstruct an image during pre-training?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [134, 137, 138, 139]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [1, 4, 7]
   },
   {
     "question": "Why does MAE use a high masking ratio?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [136, 137]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [1, 2, 6]
   },
   {
     "question": "What is the role of the encoder and decoder in the MAE architecture?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [137, 138, 139]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [1, 4, 6, 7]
   },
   {
     "question": "How does the MAE architecture reduce computational cost during pre-training?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [135, 139]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [6, 9]
   },
   {
     "question": "What effect does decoder depth have on MAE performance?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [140, 141]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [9, 10]
   },
   {
     "question": "How does the choice of mask sampling strategy affect the MAE pretext task?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [142]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [11, 12]
   },
   {
     "question": "What happens to MAE performance when the masking ratio is increased?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [136]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [8, 11]
   },
   {
     "question": "How does the training schedule affect linear probing performance?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [143]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [11, 22, 23]
   },
   {
     "question": "What are the main experimental results of MAE on ImageNet?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [144, 145]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [13, 14]
   },
   {
     "question": "How does MAE compare with DINO in the reported experiments?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [144]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [13, 14]
   },
   {
     "question": "Why does MAE reconstruct pixels instead of semantic entities?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [147]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [2, 4, 12]
   },
   {
     "question": "What are the advantages of processing only visible patches in the MAE encoder?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [137, 139]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [1, 6]
   },
   {
     "question": "What evidence does the paper provide that a lightweight decoder is sufficient?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [140, 141]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [9, 10]
   },
   {
     "question": "What are the key conclusions from the MAE ablation experiments?",
-    "document_id": "60f6c5d6-9c57-4b38-b540-d852b8312cc6",
-    "relevant_chunk_ids": [140, 141, 142, 143]
+    "document_id": "9033e754-5ee3-481b-b4cb-8a52552ceea3",
+    "relevant_chunk_ids": [8, 9, 10, 11, 12]
   }
 ]

@@ -15,7 +15,7 @@ app.include_router(documents_router, prefix="/documents", tags=["Documents"])
 
 app.include_router(search_router, prefix="/documents", tags=["Search"])
 
-app.include_router(chat_router, prefix="/documents", tags=["Search"])
+app.include_router(chat_router, prefix="/documents", tags=["Chat"])
 
 
 @app.get("/")

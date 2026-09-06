@@ -1,99 +1,76 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
+
 from app.db.dependencies import get_db
-from app.db.models import Document, DocumentChunk
-from app.services.chunking_service import chunk_text
-from app.services.embedding_service import generate_embeddings
-from app.services.pdf_service import save_pdf, extract_text
+from app.services.ingestion_service import ingest_document
+from app.services.pdf_service import save_pdf
+
 
 router = APIRouter()
 
+
 @router.post("/upload")
-async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_document(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
 
     # -------------------------
-    # 1. Validate PDF
+    # 1. Validate file
     # -------------------------
 
     if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed.",
+        )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Filename is required.",
+        )
 
     # -------------------------
     # 2. Save PDF
     # -------------------------
 
-    file_path = await save_pdf(file, file.filename)
+    file_path = await save_pdf(
+        file=file,
+        filename=file.filename,
+    )
 
     # -------------------------
-    # 3. Extract text
+    # 3. Extract + chunk +
+    #    embed + store
     # -------------------------
 
-    pages = extract_text(file_path)
-
-    # -------------------------
-    # 4. Create chunks
-    # -------------------------
-
-    all_chunks = []
-
-    for page in pages:
-
-        page_chunks = chunk_text(
-            text=page["text"],
-            page_number=page["page_number"],
-            chunk_size=500,
-            overlap=100,
+    try:
+        document = ingest_document(
+            db=db,
+            file_path=file_path,
+            filename=file.filename,
         )
 
-        all_chunks.extend(page_chunks)
-
-    if not all_chunks:
-        raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
-
-    # -------------------------
-    # 5. Generate embeddings
-    # -------------------------
-
-    texts = [chunk["text"] for chunk in all_chunks]
-
-    embeddings = generate_embeddings(texts)
-
-    # -------------------------
-    # 6. Create document
-    # -------------------------
-
-    document = Document(filename=file.filename, file_path=file_path)
-
-    db.add(document)
-
-    # -------------------------
-    # 7. Create chunks
-    # -------------------------
-
-    for chunk, embedding in zip(all_chunks, embeddings):
-        document_chunk = DocumentChunk(
-            document=document,
-            page_number=chunk["page_number"],
-            chunk_index=chunk["chunk_index"],
-            text=chunk["text"],
-            embedding=embedding,
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
         )
 
-        db.add(document_chunk)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process the document.",
+        )
 
     # -------------------------
-    # 8. Save everything
-    # -------------------------
-
-    db.commit()
-
-    # -------------------------
-    # 9. Return response
+    # 4. Return response
     # -------------------------
 
     return {
         "document_id": str(document.id),
         "filename": document.filename,
-        "pages": len(pages),
-        "chunks": len(all_chunks),
+        "file_path": document.file_path,
+        "message": "Document uploaded and processed successfully.",
     }

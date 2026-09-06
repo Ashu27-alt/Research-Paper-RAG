@@ -3,38 +3,64 @@ from sentence_transformers import CrossEncoder
 
 MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-reranker = CrossEncoder(MODEL_NAME)
 
+class RerankerService:
 
-def rerank_chunks(
-    question: str,
-    chunks: list,
-    top_k: int = 5,
-):
-    """
-    Rerank retrieved chunks according to their
-    relevance to the question.
-    """
+    def __init__(self):
+        self.model = CrossEncoder(MODEL_NAME)
 
-    if not chunks:
-        return []
+    def rerank(
+        self,
+        query: str,
+        results: list,
+        top_k: int = 5,
+    ) -> list:
+        """
+        Rerank retrieved document chunks using a cross-encoder.
 
-    pairs = [(question, chunk.text) for chunk, distance in chunks]
+        Args:
+            query: User's search query.
+            results: Results returned by vector retrieval.
+            top_k: Number of final results to return.
 
-    scores = reranker.predict(pairs)
+        Returns:
+            Reranked results with relevance scores.
+        """
 
-    reranked = []
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
 
-    for (chunk, distance), score in zip(chunks, scores):
-        reranked.append(
-            {
+        if not results:
+            return []
+
+        # Create (query, chunk_text) pairs
+        pairs = [
+            (query, result[0].text)
+            for result in results
+        ]
+
+        # Calculate cross-encoder relevance scores
+        scores = self.model.predict(pairs)
+
+        # Attach scores to results
+        reranked_results = []
+
+        for result, score in zip(results, scores):
+            chunk, distance = result
+
+            reranked_results.append({
                 "chunk": chunk,
-                "distance": distance,
-                "score": float(score),
-            }
+                "vector_distance": float(distance),
+                "rerank_score": float(score),
+            })
+
+        # Highest reranker score = most relevant
+        reranked_results.sort(
+            key=lambda x: x["rerank_score"],
+            reverse=True,
         )
 
-    # Higher cross-encoder score = more relevant
-    reranked.sort(key=lambda item: item["score"], reverse=True)
+        return reranked_results[:top_k]
 
-    return reranked[:top_k]
+
+reranker_service = RerankerService()

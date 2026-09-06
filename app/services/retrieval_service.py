@@ -1,51 +1,65 @@
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import DocumentChunk
-from app.services.embedding_service import generate_embedding
+from app.services.embedding_service import embedding_service
 
 
 def search_chunks(
     db: Session,
     query: str,
-    top_k: int = 5,
-    max_distance: float = 0.4,
+    top_k: int = 20,
+    max_distance: float | None = None,
     document_id=None,
 ):
+    """
+    Retrieve the most semantically similar document chunks.
 
-    # -------------------------
-    # 1. Generate query embedding
-    # -------------------------
+    Args:
+        db: SQLAlchemy database session.
+        query: User's natural-language query.
+        top_k: Number of candidates to retrieve.
+        max_distance: Optional cosine-distance threshold.
+        document_id: Optional document UUID to restrict the search.
+    """
 
-    query_embedding = generate_embedding(query)
+    if not query or not query.strip():
+        raise ValueError("Query cannot be empty")
 
-    # -------------------------
-    # 2. Calculate distance
-    # -------------------------
+    # 1. Generate embedding for the user's query
+    query_embedding = embedding_service.embed_text(query)
 
-    distance = DocumentChunk.embedding.cosine_distance(query_embedding)
-
-    # -------------------------
-    # 3. Build query
-    # -------------------------
-
-    query_builder = (
-        db.query(DocumentChunk, distance.label("distance"))
-        .options(joinedload(DocumentChunk.document))
-        .filter(distance <= max_distance)
+    # 2. Calculate cosine distance between query and chunks
+    distance = DocumentChunk.embedding.cosine_distance(
+        query_embedding
     )
 
-    # -------------------------
-    # 4. Optional document filter
-    # -------------------------
+    # 3. Build base query
+    query_builder = (
+        db.query(
+            DocumentChunk,
+            distance.label("distance")
+        )
+        .options(joinedload(DocumentChunk.document))
+    )
 
+    # 4. Optional document filtering
     if document_id is not None:
+        query_builder = query_builder.filter(
+            DocumentChunk.document_id == document_id
+        )
 
-        query_builder = query_builder.filter(DocumentChunk.document_id == document_id)
+    # 5. Optional distance threshold
+    if max_distance is not None:
+        query_builder = query_builder.filter(
+            distance <= max_distance
+        )
 
-    # -------------------------
-    # 5. Sort + limit
-    # -------------------------
-
-    results = query_builder.order_by(distance).limit(top_k).all()
+    # 6. Closest chunks first
+    results = (
+        query_builder
+        .order_by(distance)
+        .limit(top_k)
+        .all()
+    )
 
     return results
