@@ -5,6 +5,6 @@ pymupdf
 sentence-transformers
 pgvector
 sqlalchemy
-"psycopg[binary]"
+psycopg[binary]
 groq
 python-dotenv

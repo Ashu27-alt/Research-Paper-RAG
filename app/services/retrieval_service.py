@@ -8,7 +8,7 @@ def search_chunks(
     db: Session,
     query: str,
     top_k: int = 5,
-    max_distance: float = 0.30,
+    max_distance: float = 0.4,
     document_id=None,
 ):
 

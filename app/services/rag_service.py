@@ -2,27 +2,43 @@ from sqlalchemy.orm import Session
 
 from app.services.retrieval_service import search_chunks
 from app.services.llm_service import generate_answer
+from app.services.reranking_service import rerank_chunks
 
 
-def answer_question(db: Session, question: str, top_k: int = 5, max_distance: float = 0.30, document_id=None):
+def answer_question(
+    db: Session,
+    question: str,
+    top_k: int = 5,
+    max_distance: float = 1.0,
+    document_id=None,
+):
     # -------------------------
-    # 1. Retrieve relevant chunks
+    # 1. Retrieve candidates
     # -------------------------
 
-    results = search_chunks(
+    retrieved = search_chunks(
         db=db,
         query=question,
-        top_k=top_k,
+        top_k=20,
         max_distance=max_distance,
         document_id=document_id,
     )
 
     # -------------------------
-    # 2. No relevant context
+    # 2. Rerank candidates
+    # -------------------------
+
+    results = rerank_chunks(
+        question=question,
+        chunks=retrieved,
+        top_k=top_k,
+    )
+
+    # -------------------------
+    # 3. No relevant context
     # -------------------------
 
     if not results:
-
         return {
             "answer": (
                 "I could not find relevant information " "in the provided documents."
@@ -31,12 +47,14 @@ def answer_question(db: Session, question: str, top_k: int = 5, max_distance: fl
         }
 
     # -------------------------
-    # 3. Build context
+    # 4. Build context
     # -------------------------
 
     context_parts = []
 
-    for index, (chunk, distance) in enumerate(results, start=1):
+    for index, result in enumerate(results, start=1):
+
+        chunk = result["chunk"]
 
         context_parts.append(
             f"""
@@ -48,18 +66,25 @@ def answer_question(db: Session, question: str, top_k: int = 5, max_distance: fl
     context = "\n".join(context_parts)
 
     # -------------------------
-    # 4. Generate answer
+    # 5. Generate answer
     # -------------------------
 
-    answer = generate_answer(question=question, context=context)
+    answer = generate_answer(
+        question=question,
+        context=context,
+    )
 
     # -------------------------
-    # 5. Build sources
+    # 6. Build sources
     # -------------------------
 
     sources = []
 
-    for index, (chunk, distance) in enumerate(results, start=1):
+    for index, result in enumerate(results, start=1):
+
+        chunk = result["chunk"]
+        distance = result["distance"]
+        score = result["score"]
 
         sources.append(
             {
@@ -69,7 +94,11 @@ def answer_question(db: Session, question: str, top_k: int = 5, max_distance: fl
                 "chunk_id": chunk.id,
                 "page_number": chunk.page_number,
                 "distance": float(distance),
+                "reranker_score": float(score),
             }
         )
 
-    return {"answer": answer, "sources": sources}
+    return {
+        "answer": answer,
+        "sources": sources,
+    }

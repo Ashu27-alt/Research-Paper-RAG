@@ -9,9 +9,19 @@ router = APIRouter()
 
 
 @router.get("/search")
-def search(query: str, top_k: int = 5, db: Session = Depends(get_db)):
+def search(
+    query: str,
+    top_k: int = 5,
+    max_distance: float = 1.0,
+    db: Session = Depends(get_db)
+):
 
-    results = search_chunks(db=db, query=query, top_k=top_k)
+    results = search_chunks(
+        db=db,
+        query=query,
+        top_k=top_k,
+        max_distance=max_distance
+    )
 
     return {
         "query": query,
@@ -20,8 +30,8 @@ def search(query: str, top_k: int = 5, db: Session = Depends(get_db)):
                 "chunk_id": chunk.id,
                 "page_number": chunk.page_number,
                 "text": chunk.text,
-                "distance": float(distance),
+                "distance": float(distance)
             }
             for chunk, distance in results
-        ],
+        ]
     }
