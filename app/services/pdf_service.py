@@ -3,35 +3,78 @@
 import re
 import fitz
 import os
+import uuid
 
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from app.config import settings
 
 
 UPLOAD_DIR = settings.upload_dir
 
 
-async def save_pdf(
-    file: UploadFile,
-    filename: str,
-) -> str:
-    """Save an uploaded PDF to the configured local upload directory.
+async def save_pdf(file: UploadFile) -> str:
+    """Validate and safely save an uploaded PDF."""
 
-    Args:
-        file: FastAPI upload object containing PDF bytes.
-        filename: Filename to use below ``UPLOAD_DIR``.
+    # -------------------------
+    # 1. Validate filename
+    # -------------------------
 
-    Returns:
-        Relative local path of the saved PDF.
-    """
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="Filename is required.",
+        )
 
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        filename,
-    )
+    extension = os.path.splitext(file.filename)[1].lower()
+
+    if extension != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed.",
+        )
+
+    # -------------------------
+    # 2. Read uploaded file
+    # -------------------------
 
     contents = await file.read()
+    
+    if not contents.startswith(b"%PDF"):
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file is not a valid PDF.",
+        )
+
+    max_size = settings.max_file_size_mb * 1024 * 1024
+
+    if len(contents) > max_size:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"File size exceeds the "
+                f"{settings.max_file_size_mb} MB limit."
+            ),
+        )
+
+    # -------------------------
+    # 3. Create safe filename
+    # -------------------------
+
+    stored_filename = f"{uuid.uuid4()}.pdf"
+
+    os.makedirs(
+        settings.upload_dir,
+        exist_ok=True,
+    )
+
+    file_path = os.path.join(
+        settings.upload_dir,
+        stored_filename,
+    )
+
+    # -------------------------
+    # 4. Save file
+    # -------------------------
 
     with open(file_path, "wb") as buffer:
         buffer.write(contents)

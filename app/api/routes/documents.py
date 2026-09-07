@@ -78,10 +78,7 @@ async def upload_document(
     # 2. Save PDF to disk
     # -------------------------
 
-    file_path = await save_pdf(
-        file=file,
-        filename=file.filename,
-    )
+    file_path = await save_pdf(file=file,)
 
     # -------------------------
     # 3. Extract, chunk, embed,
