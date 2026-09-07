@@ -3,10 +3,11 @@
 import re
 
 from app.services.pdf_service import extract_text
+from app.config import settings
 
 
-DEFAULT_CHUNK_SIZE = 400
-DEFAULT_OVERLAP = 80
+DEFAULT_CHUNK_SIZE = settings.chunk_size
+DEFAULT_OVERLAP = settings.chunk_overlap
 
 
 # ---------------------------------------------------------

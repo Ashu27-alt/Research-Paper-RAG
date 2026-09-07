@@ -1,28 +1,30 @@
 """Endpoint for direct semantic search over indexed chunks."""
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
+from app.schemas.search import SearchRequest, SearchResponse
 from app.services.retrieval_service import search_chunks
 
 
 router = APIRouter()
 
 
-@router.get("/search")
+@router.get(
+    "/search",
+    response_model=SearchResponse,
+)
 def search(
-    query: str,
-    top_k: int = 5,
-    max_distance: float = 1.0,
-    db: Session = Depends(get_db)
+    request: Annotated[SearchRequest, Query()],
+    db: Session = Depends(get_db),
 ):
     """Return chunks closest to a query embedding.
 
     Args:
-        query: Natural-language text to search for.
-        top_k: Maximum number of chunks to return.
-        max_distance: Maximum cosine distance a result may have.
+        request: Validated query parameters defined by ``SearchRequest``.
         db: Request-scoped SQLAlchemy session.
 
     Returns:
@@ -31,13 +33,14 @@ def search(
 
     results = search_chunks(
         db=db,
-        query=query,
-        top_k=top_k,
-        max_distance=max_distance
+        query=request.query,
+        top_k=request.top_k,
+        max_distance=request.max_distance,
+        document_id=request.document_id,
     )
 
     return {
-        "query": query,
+        "query": request.query,
         "results": [
             {
                 "chunk_id": chunk.id,

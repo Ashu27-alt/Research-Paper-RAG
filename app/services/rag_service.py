@@ -5,13 +5,13 @@ from sqlalchemy.orm import Session
 from app.services.retrieval_service import search_chunks
 from app.services.llm_service import generate_answer
 from app.services.reranking_service import reranker_service
-
+from app.config import settings
 
 def answer_question(
     db: Session,
     question: str,
-    top_k: int = 5,
-    max_distance: float = 1.0,
+    top_k: int = settings.reranking_top_k,
+    max_distance: float =settings.max_distance,
     document_id=None,
 ):
     """Answer a question using the most relevant indexed document chunks.
@@ -102,6 +102,7 @@ def answer_question(
         chunk = result["chunk"]
 
         score = result["rerank_score"]
+        distance = result["vector_distance"]
 
         sources.append(
             {
@@ -110,6 +111,7 @@ def answer_question(
                 "filename": chunk.document.filename,
                 "chunk_id": chunk.id,
                 "page_number": chunk.page_number,
+                "distance": float(distance),
                 "reranker_score": float(score),
             }
         )

@@ -22,7 +22,7 @@ def chat(
     """Answer a question using retrieved document context.
 
     Args:
-        request: Question and optional document/retrieval parameters.
+        request: JSON request body validated against ``ChatRequest``.
         db: Request-scoped SQLAlchemy session.
 
     Returns:

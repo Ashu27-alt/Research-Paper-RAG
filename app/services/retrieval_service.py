@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import DocumentChunk
 from app.services.embedding_service import embedding_service
+from app.config import settings
 
 
 def search_chunks(
     db: Session,
     query: str,
-    top_k: int = 20,
-    max_distance: float | None = None,
+    top_k: int = settings.retrieval_top_k,
+    max_distance: float | None = settings.max_distance,
     document_id=None,
 ):
     """Retrieve the document chunks closest to a query embedding.

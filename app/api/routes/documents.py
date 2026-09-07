@@ -11,6 +11,7 @@ from app.schemas.documents import (
     DeleteDocumentResponse,
     DocumentDetailResponse,
     DocumentResponse,
+    UploadDocumentResponse,
 )
 from app.services.ingestion_service import ingest_document
 from app.services.pdf_service import save_pdf
@@ -19,7 +20,27 @@ from app.services.pdf_service import save_pdf
 router = APIRouter()
 
 
-@router.post("/upload")
+def serialize_document(document: Document) -> dict:
+    """Convert a document ORM object into the shared API response shape.
+
+    Args:
+        document: Persisted document returned by SQLAlchemy.
+
+    Returns:
+        Document fields matching ``DocumentResponse``.
+    """
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "file_path": document.file_path,
+        "created_at": document.created_at,
+    }
+
+
+@router.post(
+    "/upload",
+    response_model=UploadDocumentResponse,
+)
 async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -128,7 +149,7 @@ def list_documents(
     # 2. Return document list
     # -------------------------
 
-    return documents
+    return [serialize_document(document) for document in documents]
 
 
 @router.get(
@@ -173,10 +194,7 @@ def get_document(
     # -------------------------
 
     return {
-        "document_id": document.id,
-        "filename": document.filename,
-        "file_path": document.file_path,
-        "created_at": document.created_at,
+        **serialize_document(document),
         "chunks": len(document.chunks),
     }
 

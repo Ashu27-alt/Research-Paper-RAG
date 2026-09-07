@@ -1,32 +1,34 @@
-"""Database engine, session factory, and declarative model base."""
+"""Database engine and SQLAlchemy session configuration."""
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-
-# PostgreSQL connection used by SQLAlchemy and pgvector.
-DATABASE_URL = (
-    "postgresql+psycopg://"
-    "rag_user:rag_password"
-    "@localhost:5432/"
-    "rag_db"
-)
+from app.config import settings
 
 
-# Shared engine that manages database connections.
+# -------------------------
+# 1. Create database engine
+# -------------------------
+
 engine = create_engine(
-    DATABASE_URL,
-    echo=True
+    settings.database_url,
+    echo=settings.debug,
 )
 
 
-# Factory for independent request or script database sessions.
+# -------------------------
+# 2. Create database session
+# -------------------------
+
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
-    autocommit=False
+    autocommit=False,
 )
 
 
-# Base class inherited by all SQLAlchemy ORM models.
+# -------------------------
+# 3. Create declarative base
+# -------------------------
+
 Base = declarative_base()

@@ -1,6 +1,11 @@
 """Application configuration loaded from environment variables."""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -54,7 +59,8 @@ class Settings(BaseSettings):
     max_distance: float = 1.0
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Resolve from this module so commands can run from any directory.
+        env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

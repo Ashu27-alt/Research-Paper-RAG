@@ -5,9 +5,10 @@ import fitz
 import os
 
 from fastapi import UploadFile
+from app.config import settings
 
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = settings.upload_dir
 
 
 async def save_pdf(
