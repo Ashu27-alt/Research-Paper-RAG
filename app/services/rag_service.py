@@ -1,3 +1,5 @@
+"""Orchestration for retrieval, reranking, context construction, and answering."""
+
 from sqlalchemy.orm import Session
 
 from app.services.retrieval_service import search_chunks
@@ -12,6 +14,18 @@ def answer_question(
     max_distance: float = 1.0,
     document_id=None,
 ):
+    """Answer a question using the most relevant indexed document chunks.
+
+    Args:
+        db: Active SQLAlchemy session used for vector retrieval.
+        question: Natural-language question to answer.
+        top_k: Number of reranked chunks passed to the language model.
+        max_distance: Maximum vector distance allowed during candidate retrieval.
+        document_id: Optional document UUID that narrows the search scope.
+
+    Returns:
+        A dictionary containing an ``answer`` and citation-ready ``sources``.
+    """
     # -------------------------
     # 1. Retrieve candidates
     # -------------------------

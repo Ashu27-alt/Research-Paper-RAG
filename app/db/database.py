@@ -1,7 +1,10 @@
+"""Database engine, session factory, and declarative model base."""
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
+# PostgreSQL connection used by SQLAlchemy and pgvector.
 DATABASE_URL = (
     "postgresql+psycopg://"
     "rag_user:rag_password"
@@ -10,12 +13,14 @@ DATABASE_URL = (
 )
 
 
+# Shared engine that manages database connections.
 engine = create_engine(
     DATABASE_URL,
     echo=True
 )
 
 
+# Factory for independent request or script database sessions.
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
@@ -23,4 +28,5 @@ SessionLocal = sessionmaker(
 )
 
 
+# Base class inherited by all SQLAlchemy ORM models.
 Base = declarative_base()

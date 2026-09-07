@@ -1,3 +1,5 @@
+"""Groq client wrapper that generates answers grounded in retrieved context."""
+
 import os
 
 from dotenv import load_dotenv
@@ -14,6 +16,15 @@ MODEL_NAME = "openai/gpt-oss-120b"
 
 
 def generate_answer(question: str, context: str) -> str:
+    """Generate a cited answer using only supplied document context.
+
+    Args:
+        question: User's natural-language question.
+        context: Retrieved chunks, formatted with ``[SOURCE n]`` labels.
+
+    Returns:
+        The language model's grounded answer with source citations.
+    """
     system_prompt = """
             You are a document question-answering assistant.
 

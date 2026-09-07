@@ -1,3 +1,5 @@
+"""Reusable two-stage semantic search service."""
+
 from sqlalchemy.orm import Session
 
 from app.services.retrieval_service import search_chunks
@@ -11,11 +13,19 @@ def search(
     top_k: int = 5,
     document_id=None,
 ):
-    """
-    Two-stage retrieval:
+    """Run vector retrieval followed by cross-encoder reranking.
 
     1. Vector similarity search
     2. Cross-encoder reranking
+    Args:
+        db: Active SQLAlchemy session used for retrieval.
+        query: Natural-language text to search for.
+        candidate_k: Number of vector-search candidates to rerank.
+        top_k: Number of final reranked results to return.
+        document_id: Optional document UUID that narrows the search scope.
+
+    Returns:
+        Reranked result dictionaries containing chunks and relevance scores.
     """
 
     # Stage 1: retrieve candidates using pgvector

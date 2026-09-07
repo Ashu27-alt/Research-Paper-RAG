@@ -1,3 +1,5 @@
+"""PDF persistence and layout-aware text/table extraction helpers."""
+
 import re
 import fitz
 import os
@@ -12,6 +14,15 @@ async def save_pdf(
     file: UploadFile,
     filename: str,
 ) -> str:
+    """Save an uploaded PDF to the configured local upload directory.
+
+    Args:
+        file: FastAPI upload object containing PDF bytes.
+        filename: Filename to use below ``UPLOAD_DIR``.
+
+    Returns:
+        Relative local path of the saved PDF.
+    """
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     file_path = os.path.join(
@@ -32,8 +43,13 @@ async def save_pdf(
 # ---------------------------------------------------------
 
 def normalize_text(text: str) -> str:
-    """
-    Normalize whitespace while preserving readable text.
+    """Normalize whitespace while preserving readable text.
+
+    Args:
+        text: Raw text extracted from a PDF span or block.
+
+    Returns:
+        Trimmed text with normalized spaces and excessive blank lines removed.
     """
     text = text.replace("\u00a0", " ")
     text = re.sub(r"[ \t]+", " ", text)
@@ -42,6 +58,15 @@ def normalize_text(text: str) -> str:
 
 
 def rects_overlap(a, b) -> bool:
+    """Return whether two ``(x0, y0, x1, y1)`` rectangles overlap.
+
+    Args:
+        a: Bounding box of the first element.
+        b: Bounding box of the second element.
+
+    Returns:
+        ``True`` when the rectangles share any area.
+    """
     """
     Check whether two bounding boxes overlap.
     """
@@ -57,6 +82,15 @@ def rects_overlap(a, b) -> bool:
 
 
 def block_overlaps_tables(block: dict, table_bboxes: list) -> bool:
+    """Check whether a text block overlaps an already extracted table.
+
+    Args:
+        block: Extracted block containing a ``bbox`` field.
+        table_bboxes: Bounding boxes for tables on the same page.
+
+    Returns:
+        ``True`` if the block intersects at least one table.
+    """
     bbox = block["bbox"]
 
     return any(
@@ -70,8 +104,7 @@ def block_overlaps_tables(block: dict, table_bboxes: list) -> bool:
 # ---------------------------------------------------------
 
 def extract_page_blocks(page) -> list[dict]:
-    """
-    Extract structured text blocks from a PDF page.
+    """Extract structured non-table text blocks from one PyMuPDF page.
 
     Keeps useful layout information such as:
     - text
@@ -79,6 +112,11 @@ def extract_page_blocks(page) -> list[dict]:
     - font size
     - font
     - bold
+    Args:
+        page: PyMuPDF page object to inspect.
+
+    Returns:
+        Text block dictionaries with content, geometry, font data, and type.
     """
 
     data = page.get_text("dict")
@@ -172,8 +210,7 @@ def extract_page_blocks(page) -> list[dict]:
 # ---------------------------------------------------------
 
 def is_valid_table(rows: list[list]) -> bool:
-    """
-    Conservative validation for tables.
+    """Return whether extracted rows plausibly represent a data table.
 
     A table should:
     - contain at least 2 rows
@@ -181,6 +218,11 @@ def is_valid_table(rows: list[list]) -> bool:
     - not be mostly empty
     - contain some numeric information
     - avoid cells that look like paragraphs
+    Args:
+        rows: Cell values emitted by PyMuPDF's table extractor.
+
+    Returns:
+        ``True`` for multi-row, multi-column, mostly populated numeric tables.
     """
 
     if not rows or len(rows) < 2:
@@ -241,8 +283,13 @@ def is_valid_table(rows: list[list]) -> bool:
 
 
 def rows_to_markdown(rows: list[list]) -> str:
-    """
-    Convert extracted table rows into Markdown.
+    """Convert extracted table rows into a padded Markdown table.
+
+    Args:
+        rows: Table rows, whose cells may be ``None`` or uneven in length.
+
+    Returns:
+        Markdown table text, or an empty string when no rows are supplied.
     """
 
     if not rows:
@@ -306,10 +353,14 @@ def rows_to_markdown(rows: list[list]) -> str:
 
 
 def extract_page_tables(page) -> list[dict]:
-    """
-    Extract tables using PyMuPDF's table detector.
+    """Extract validated tables from one PyMuPDF page.
 
     False page-sized detections are rejected.
+    Args:
+        page: PyMuPDF page object to inspect.
+
+    Returns:
+        Table block dictionaries containing Markdown text and geometry.
     """
 
     blocks = []
@@ -387,6 +438,15 @@ def remove_headers_and_footers(
     blocks: list[dict],
     page_height: float,
 ) -> list[dict]:
+    """Remove page numbers and blocks in top/bottom page margins.
+
+    Args:
+        blocks: Text or table blocks from one page.
+        page_height: Height of that page in PDF coordinates.
+
+    Returns:
+        Blocks that are likely document content rather than headers or footers.
+    """
 
     top_limit = page_height * 0.05
     bottom_limit = page_height * 0.95
@@ -427,6 +487,15 @@ def is_two_column_layout(
     blocks: list[dict],
     page_width: float,
 ) -> bool:
+    """Heuristically detect whether blocks form a two-column page layout.
+
+    Args:
+        blocks: Extracted blocks with horizontal bounding-box coordinates.
+        page_width: Width of the page in PDF coordinates.
+
+    Returns:
+        ``True`` when blocks form distinct left and right narrow columns.
+    """
 
     if len(blocks) < 5:
         return False
@@ -491,6 +560,15 @@ def order_blocks(
     blocks: list[dict],
     page_width: float,
 ) -> list[dict]:
+    """Order blocks in natural reading order for one- or two-column pages.
+
+    Args:
+        blocks: Extracted blocks with ``x0`` and ``y0`` geometry.
+        page_width: Width of the page in PDF coordinates.
+
+    Returns:
+        Sorted blocks; left column precedes right column for two-column pages.
+    """
 
     if not blocks:
         return []
@@ -569,8 +647,7 @@ COMMON_HEADINGS = {
 
 
 def looks_like_numeric_chart_label(text: str) -> bool:
-    """
-    Reject chart axis labels such as:
+    """Detect chart labels that should not be treated as headings.
 
         10 20 30 40 50 60 70
         0 1 2 4 6 12 18 24 70
@@ -578,6 +655,12 @@ def looks_like_numeric_chart_label(text: str) -> bool:
         66.1 linear probing
 
     These frequently appear as PDF text blocks around figures.
+
+    Args:
+        text: Candidate heading text.
+
+    Returns:
+        ``True`` when the text is predominantly numeric or axis-label-like.
     """
 
     text = text.strip()
@@ -624,6 +707,14 @@ def looks_like_numeric_chart_label(text: str) -> bool:
 
 
 def is_heading(block: dict) -> bool:
+    """Determine whether a text block is a short document section heading.
+
+    Args:
+        block: Text block produced by ``extract_page_blocks``.
+
+    Returns:
+        ``True`` for recognized, numbered, or appendix-style headings.
+    """
 
     text = block["text"].strip()
 
@@ -664,6 +755,14 @@ def is_heading(block: dict) -> bool:
 def classify_blocks(
     blocks: list[dict],
 ) -> list[dict]:
+    """Assign each block a semantic type for downstream chunking.
+
+    Args:
+        blocks: Ordered page blocks, including any extracted tables.
+
+    Returns:
+        Copies of blocks labeled as ``table``, ``caption``, ``heading``, or ``text``.
+    """
 
     classified = []
 
@@ -701,6 +800,14 @@ def classify_blocks(
 # ---------------------------------------------------------
 
 def extract_text(file_path: str) -> list[dict]:
+    """Extract layout-aware text, table, and semantic block data from a PDF.
+
+    Args:
+        file_path: Local filesystem path to the PDF to process.
+
+    Returns:
+        Page dictionaries containing one-based page numbers and ordered blocks.
+    """
 
     document = fitz.open(file_path)
 

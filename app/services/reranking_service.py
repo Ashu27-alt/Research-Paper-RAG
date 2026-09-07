@@ -1,3 +1,5 @@
+"""Cross-encoder reranking for vector-retrieval candidates."""
+
 from sentence_transformers import CrossEncoder
 
 
@@ -5,8 +7,10 @@ MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 class RerankerService:
+    """Load and apply the configured cross-encoder relevance model."""
 
     def __init__(self):
+        """Load the reranking model once for reuse by the application."""
         self.model = CrossEncoder(MODEL_NAME)
 
     def rerank(
@@ -15,8 +19,7 @@ class RerankerService:
         results: list,
         top_k: int = 5,
     ) -> list:
-        """
-        Rerank retrieved document chunks using a cross-encoder.
+        """Rerank retrieved document chunks using a cross-encoder.
 
         Args:
             query: User's search query.
@@ -24,7 +27,10 @@ class RerankerService:
             top_k: Number of final results to return.
 
         Returns:
-            Reranked results with relevance scores.
+            Dictionaries containing the chunk, vector distance, and reranker score.
+
+        Raises:
+            ValueError: If ``query`` is empty or only whitespace.
         """
 
         if not query or not query.strip():

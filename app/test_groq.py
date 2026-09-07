@@ -1,3 +1,5 @@
+"""Manual smoke test for the configured Groq API credentials and model."""
+
 import os
 
 from dotenv import load_dotenv

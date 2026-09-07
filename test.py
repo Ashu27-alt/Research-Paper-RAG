@@ -1,3 +1,5 @@
+"""Manual inspection script that prints text-block geometry from a sample PDF."""
+
 import fitz
 
 doc = fitz.open("uploads/imageMAE.pdf")

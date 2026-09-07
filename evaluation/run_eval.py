@@ -1,3 +1,5 @@
+"""Run retrieval and reranking evaluation against a labeled JSON dataset."""
+
 import json
 from pathlib import Path
 
@@ -18,11 +20,21 @@ RERANK_TOP_K = 5
 
 
 def load_dataset():
+    """Load evaluation examples from the configured JSON dataset path.
+
+    Returns:
+        Parsed question, document, and relevant-chunk records.
+    """
     with open(DATASET_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def evaluate():
+    """Evaluate vector retrieval plus reranking and print aggregate metrics.
+
+    The function opens its own database session, evaluates every dataset example
+    at each configured candidate depth, and closes the session before returning.
+    """
     dataset = load_dataset()
     db = SessionLocal()
 

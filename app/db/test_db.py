@@ -1,3 +1,5 @@
+"""Manual smoke test that prints whether the configured database is reachable."""
+
 from app.db.database import engine
 
 

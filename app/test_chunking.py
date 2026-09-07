@@ -1,3 +1,5 @@
+"""Manual example that prints chunks generated from a short sample document."""
+
 from app.services.chunking_service import chunk_pages
 
 

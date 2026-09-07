@@ -1,3 +1,5 @@
+"""SQLAlchemy models for uploaded documents and their vectorized chunks."""
+
 import uuid
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, Text, Integer, DateTime, ForeignKey
@@ -7,6 +9,15 @@ from sqlalchemy.sql import func
 from app.db.database import Base
 
 class Document(Base):
+    """An uploaded file and its collection of indexed chunks.
+
+    Attributes:
+        id: UUID primary key generated for the document.
+        filename: Original name supplied during upload.
+        file_path: Local path where the PDF was saved.
+        created_at: Database-generated upload timestamp.
+        chunks: Related ``DocumentChunk`` rows; deleting this document deletes them.
+    """
 
     __tablename__ = "documents"
 
@@ -24,6 +35,17 @@ class Document(Base):
 
 
 class DocumentChunk(Base):
+    """A searchable section of a document with its vector embedding.
+
+    Attributes:
+        id: Integer primary key.
+        document_id: UUID of the parent document.
+        page_number: One-based PDF page containing the chunk.
+        chunk_index: Position of the chunk within its page.
+        text: Extracted text sent to retrieval and answer generation.
+        embedding: Normalized 384-dimensional vector used for similarity search.
+        document: Related parent ``Document``.
+    """
 
     __tablename__ = "document_chunks"
 

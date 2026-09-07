@@ -1,3 +1,5 @@
+"""Convert extracted PDF blocks into retrieval-sized, overlapping text chunks."""
+
 import re
 
 from app.services.pdf_service import extract_text
@@ -12,6 +14,14 @@ DEFAULT_OVERLAP = 80
 # ---------------------------------------------------------
 
 def count_words(text: str) -> int:
+    """Count whitespace-delimited words in ``text``.
+
+    Args:
+        text: Text whose words should be counted.
+
+    Returns:
+        Number of non-whitespace tokens.
+    """
     return len(re.findall(r"\S+", text))
 
 
@@ -24,6 +34,19 @@ def chunk_pages(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     overlap: int = DEFAULT_OVERLAP,
 ) -> list[dict]:
+    """Chunk every extracted page while retaining page metadata.
+
+    Args:
+        pages: Page dictionaries produced by ``extract_text``.
+        chunk_size: Maximum target word count for each chunk.
+        overlap: Maximum number of words carried into the next chunk.
+
+    Returns:
+        Chunk dictionaries containing page number, index, section, types, and text.
+
+    Raises:
+        ValueError: If ``overlap`` is at least ``chunk_size``.
+    """
 
     if overlap >= chunk_size:
         raise ValueError(
@@ -50,6 +73,16 @@ def chunk_page(
     chunk_size: int,
     overlap: int,
 ) -> list[dict]:
+    """Split one page's typed blocks into coherent, bounded-size chunks.
+
+    Args:
+        page: Extracted page with ``page_number`` and ordered ``blocks``.
+        chunk_size: Maximum target word count for a chunk.
+        overlap: Maximum words retained between adjacent text chunks.
+
+    Returns:
+        Chunk dictionaries for the page; tables are returned as standalone chunks.
+    """
 
     page_number = page["page_number"]
     blocks = page.get("blocks", [])
@@ -65,6 +98,7 @@ def chunk_page(
     chunk_index = 0
 
     def flush_current():
+        """Append accumulated blocks as one chunk and reset the accumulator."""
 
         nonlocal current_blocks
         nonlocal current_word_count
@@ -215,6 +249,17 @@ def create_chunk(
     section: str | None,
     blocks: list[dict],
 ) -> dict:
+    """Build the persisted representation for a group of PDF blocks.
+
+    Args:
+        page_number: One-based PDF page number.
+        chunk_index: Zero-based chunk position within the page.
+        section: Most recent heading, if one applies.
+        blocks: Ordered text, heading, caption, or table blocks.
+
+    Returns:
+        A chunk dictionary ready for embedding and database storage.
+    """
 
     text_parts = []
     block_types = []
@@ -260,6 +305,19 @@ def split_large_block(
     chunk_size: int,
     overlap: int,
 ) -> list[dict]:
+    """Split an oversized text block at sentence boundaries.
+
+    Args:
+        block: Text block too large for one chunk.
+        page_number: One-based PDF page number.
+        chunk_index: Index assigned to the first generated chunk.
+        section: Most recent heading, if one applies.
+        chunk_size: Maximum target word count per generated chunk.
+        overlap: Maximum words of trailing sentences repeated in the next chunk.
+
+    Returns:
+        Sentence-aligned chunk dictionaries, or an empty list for blank text.
+    """
 
     text = block.get(
         "text",
@@ -357,6 +415,15 @@ def get_overlap_sentences(
     sentences: list[str],
     overlap: int,
 ) -> list[str]:
+    """Select trailing sentences that fit inside an overlap word budget.
+
+    Args:
+        sentences: Sentences from the previous chunk.
+        overlap: Maximum words to carry forward.
+
+    Returns:
+        The selected suffix of sentences in original order.
+    """
 
     result = []
     word_count = 0
@@ -389,6 +456,15 @@ def build_overlap(
     blocks: list[dict],
     overlap: int,
 ) -> list[dict]:
+    """Select trailing non-table blocks that fit inside an overlap budget.
+
+    Args:
+        blocks: Blocks from the previous chunk.
+        overlap: Maximum words to carry forward.
+
+    Returns:
+        The selected suffix of blocks in original order.
+    """
 
     result = []
     word_count = 0

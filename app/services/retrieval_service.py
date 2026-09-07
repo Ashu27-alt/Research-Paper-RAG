@@ -1,3 +1,5 @@
+"""Vector similarity retrieval over persisted document chunks."""
+
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import DocumentChunk
@@ -11,8 +13,7 @@ def search_chunks(
     max_distance: float | None = None,
     document_id=None,
 ):
-    """
-    Retrieve the most semantically similar document chunks.
+    """Retrieve the document chunks closest to a query embedding.
 
     Args:
         db: SQLAlchemy database session.
@@ -20,6 +21,11 @@ def search_chunks(
         top_k: Number of candidates to retrieve.
         max_distance: Optional cosine-distance threshold.
         document_id: Optional document UUID to restrict the search.
+    Returns:
+        Tuples of ``(DocumentChunk, cosine_distance)``, nearest first.
+
+    Raises:
+        ValueError: If ``query`` is empty or only whitespace.
     """
 
     if not query or not query.strip():

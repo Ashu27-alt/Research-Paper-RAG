@@ -1,3 +1,5 @@
+"""PDF ingestion pipeline: extract text, chunk it, embed it, and persist it."""
+
 from sqlalchemy.orm import Session
 
 from app.db.models import Document, DocumentChunk
@@ -11,6 +13,20 @@ def ingest_document(
     file_path: str,
     filename: str,
 ) -> Document:
+    """Create an indexed document from a saved PDF.
+
+    Args:
+        db: Active SQLAlchemy session used for all persistence.
+        file_path: Local path to the PDF that should be ingested.
+        filename: Original file name stored with the document record.
+
+    Returns:
+        The committed ``Document`` ORM object.
+
+    Raises:
+        ValueError: If the PDF yields no chunks or embedding counts disagree.
+        Exception: Any extraction, embedding, or database error after rollback.
+    """
 
     try:
         # Extract PDF

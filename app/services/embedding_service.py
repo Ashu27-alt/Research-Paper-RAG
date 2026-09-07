@@ -1,3 +1,5 @@
+"""Embedding model wrapper used by ingestion and vector retrieval."""
+
 from sentence_transformers import SentenceTransformer
 
 
@@ -6,12 +8,23 @@ EMBEDDING_DIMENSION = 384
 
 
 class EmbeddingService:
+    """Load the configured SentenceTransformer and create normalized vectors."""
+
     def __init__(self):
+        """Load the embedding model once for reuse by the application."""
         self.model = SentenceTransformer(MODEL_NAME)
 
     def embed_text(self, text: str) -> list[float]:
-        """
-        Generate an embedding for a single piece of text.
+        """Generate a normalized embedding for one non-empty string.
+
+        Args:
+            text: Text to convert into a vector.
+
+        Returns:
+            A 384-dimensional embedding as a list of floats.
+
+        Raises:
+            ValueError: If ``text`` is empty or only whitespace.
         """
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
@@ -24,8 +37,16 @@ class EmbeddingService:
         return embedding.tolist()
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        """
-        Generate embeddings for multiple texts.
+        """Generate normalized embeddings for multiple non-empty strings.
+
+        Args:
+            texts: Text strings to embed in one model call.
+
+        Returns:
+            One 384-dimensional embedding per input text, or an empty list.
+
+        Raises:
+            ValueError: If any supplied text is empty or only whitespace.
         """
         if not texts:
             return []

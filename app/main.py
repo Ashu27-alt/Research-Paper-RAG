@@ -1,3 +1,5 @@
+"""Application entry point that registers the HTTP API routes."""
+
 from fastapi import FastAPI
 
 from app.api.routes.documents import router as documents_router
@@ -11,13 +13,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
-app.include_router(documents_router, prefix="/documents", tags=["Documents"])
+# Upload and document-management endpoints.
+app.include_router(documents_router, tags=["Documents"])
 
+# Search remains nested under /documents.
 app.include_router(search_router, prefix="/documents", tags=["Search"])
 
-app.include_router(chat_router, prefix="/documents", tags=["Chat"])
+# Question-answering endpoint.
+app.include_router(chat_router, tags=["Chat"])
 
 
 @app.get("/")
 def root():
+    """Return a lightweight health response for the API root."""
     return {"message": "RAG API is running"}
