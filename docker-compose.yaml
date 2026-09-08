@@ -1,5 +1,9 @@
 services:
 
+  # -------------------------
+  # 1. PostgreSQL + pgvector
+  # -------------------------
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: rag_postgres
@@ -14,6 +18,74 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U rag_user -d rag_db"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  # -------------------------
+  # 2. FastAPI application
+  # -------------------------
+
+  api:
+    build:
+      context: .
+
+    container_name: rag_api
+
+    environment:
+      DATABASE_URL: postgresql+psycopg://rag_user:rag_password@postgres:5432/rag_db
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: openai/gpt-oss-120b
+
+      APP_NAME: RAG Document Intelligence
+      DEBUG: "false"
+
+      UPLOAD_DIR: uploads
+      MAX_FILE_SIZE_MB: 50
+
+      CHUNK_SIZE: 400
+      CHUNK_OVERLAP: 80
+
+      RETRIEVAL_TOP_K: 20
+      RERANKING_TOP_K: 5
+      MAX_DISTANCE: 1.0
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - uploads_data:/app/uploads
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+# -------------------------
+# 3. Persistent volumes
+# -------------------------
 
 volumes:
   postgres_data:
+  uploads_data:
