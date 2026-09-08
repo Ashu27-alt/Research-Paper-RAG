@@ -1,122 +1,119 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+/**
+ * Main application layout.
+ */
+
+import { useEffect, useState } from "react";
+import { getDocuments } from "./api/client";
+import DocumentList from "./components/DocumentsList.jsx";
+import FileUpload from "./components/FileUpload.jsx";
+import Chat from "./components/Chat.jsx";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // -------------------------
+  // Load documents
+  // -------------------------
+
+  const loadDocuments = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getDocuments();
+
+      setDocuments(data);
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          "Failed to load documents."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -------------------------
+  // Remove deleted document
+  // -------------------------
+
+  const handleDocumentDeleted = (documentId) => {
+    setDocuments((previous) =>
+      previous.filter(
+        (document) =>
+          document.document_id !== documentId
+      )
+    );
+  };
+
+  // -------------------------
+  // Initial load
+  // -------------------------
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">
+              RAG Document Intelligence
+            </h1>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+            <p className="mt-1 text-xs text-slate-500">
+              Search and chat across your documents
+            </p>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Main */}
+      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[320px_1fr]">
+        {/* Sidebar */}
+        <aside className="space-y-6">
+          {/* Upload */}
+          <FileUpload
+            onUploadComplete={loadDocuments}
+          />
+
+          {/* Documents */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <DocumentList
+              documents={documents}
+              onDocumentDeleted={
+                handleDocumentDeleted
+              }
+            />
+          </div>
+        </aside>
+
+        {/* Chat */}
+        <section className="min-h-[calc(100vh-140px)] rounded-xl border border-slate-200 bg-white p-6">
+          <Chat />
+        </section>
+      </main>
+
+      {/* Global error */}
+      {error && (
+        <div className="fixed bottom-5 right-5 max-w-sm rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 shadow-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="fixed bottom-5 left-5 rounded-lg bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+          Loading documents...
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;

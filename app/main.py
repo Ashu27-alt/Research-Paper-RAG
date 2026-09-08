@@ -9,6 +9,7 @@ from app.api.routes.documents import router as documents_router
 from app.api.routes.search import router as search_router
 from app.db import models  # noqa: F401
 from app.db.database import Base, engine
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -28,6 +29,21 @@ app = FastAPI(
     description="RAG-based document question answering system",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+# -------------------------
+# 1. Configure CORS
+# -------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Upload and document-management endpoints.

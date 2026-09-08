@@ -16,3 +16,5 @@ python-dotenv
 pydantic-settings
 
 alembic
+celery
+redis
