@@ -13,8 +13,8 @@ from app.schemas.documents import (
     DocumentResponse,
     UploadDocumentResponse,
 )
-from app.services.ingestion_service import ingest_document
 from app.services.pdf_service import save_pdf
+from app.worker.tasks import process_document
 
 
 router = APIRouter()
@@ -29,10 +29,12 @@ def serialize_document(document: Document) -> dict:
     Returns:
         Document fields matching ``DocumentResponse``.
     """
+
     return {
         "document_id": document.id,
         "filename": document.filename,
         "file_path": document.file_path,
+        "processing_status": document.processing_status,
         "created_at": document.created_at,
     }
 
@@ -45,17 +47,19 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Upload and index a PDF.
+    """Upload a PDF and queue it for background processing.
 
     Args:
         file: Required PDF sent as multipart form data.
         db: Request-scoped SQLAlchemy session supplied by FastAPI.
 
     Returns:
-        The stored document ID, filename, file path, and a success message.
+        The stored document ID, filename, processing status,
+        file path, and upload message.
 
     Raises:
-        HTTPException: 400 for invalid input or 500 if ingestion fails.
+        HTTPException: 400 for invalid input or 500 if saving
+            the document record fails.
     """
 
     # -------------------------
@@ -78,41 +82,60 @@ async def upload_document(
     # 2. Save PDF to disk
     # -------------------------
 
-    file_path = await save_pdf(file=file,)
+    file_path = await save_pdf(file=file)
 
     # -------------------------
-    # 3. Extract, chunk, embed,
-    #    and store document
+    # 3. Create document record
     # -------------------------
 
     try:
-        document = ingest_document(
-            db=db,
-            file_path=file_path,
+        document = Document(
             filename=file.filename,
+            file_path=file_path,
+            processing_status="pending",
         )
 
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e),
-        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
 
     except Exception:
+        db.rollback()
+
         raise HTTPException(
             status_code=500,
-            detail="Failed to process the document.",
+            detail="Failed to create document record.",
         )
 
     # -------------------------
-    # 4. Return upload result
+    # 4. Queue background task
+    # -------------------------
+
+    try:
+        process_document.delay(
+            str(document.id)
+        )
+
+    except Exception:
+        document.processing_status = "failed"
+
+        db.commit()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to queue document processing.",
+        )
+
+    # -------------------------
+    # 5. Return immediately
     # -------------------------
 
     return {
         "document_id": str(document.id),
         "filename": document.filename,
         "file_path": document.file_path,
-        "message": "Document uploaded and processed successfully.",
+        "processing_status": document.processing_status,
+        "message": "Document uploaded and queued for processing.",
     }
 
 
@@ -123,13 +146,14 @@ async def upload_document(
 def list_documents(
     db: Session = Depends(get_db),
 ):
-    """List all indexed documents, newest first.
+    """List all documents, newest first.
 
     Args:
         db: Request-scoped SQLAlchemy session.
 
     Returns:
-        Document IDs, filenames, storage paths, and creation timestamps.
+        Document IDs, filenames, storage paths, processing statuses,
+        and creation timestamps.
     """
 
     # -------------------------
@@ -146,7 +170,10 @@ def list_documents(
     # 2. Return document list
     # -------------------------
 
-    return [serialize_document(document) for document in documents]
+    return [
+        serialize_document(document)
+        for document in documents
+    ]
 
 
 @router.get(
@@ -157,14 +184,14 @@ def get_document(
     document_id: UUID,
     db: Session = Depends(get_db),
 ):
-    """Get metadata for one indexed document.
+    """Get metadata for one document.
 
     Args:
         document_id: UUID of the document to retrieve.
         db: Request-scoped SQLAlchemy session.
 
     Returns:
-        Document metadata plus the number of indexed chunks.
+        Document metadata, processing status, and chunk count.
 
     Raises:
         HTTPException: 404 when no document matches ``document_id``.

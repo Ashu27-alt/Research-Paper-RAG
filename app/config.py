@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # -------------------------
+    # 3. Redis settings
+    # -------------------------
+
+    redis_url: str = "redis://localhost:6379/0"
+    
+    # -------------------------
     # 2. Database settings
     # -------------------------
 
@@ -28,6 +34,19 @@ class Settings(BaseSettings):
         "@localhost:5432/"
         "rag_db"
     )
+
+    # -------------------------
+    # 3. Redis settings
+    # -------------------------
+
+    redis_url: str = "redis://localhost:6379/0"
+
+    # -------------------------
+    # 4. Groq settings
+    # -------------------------
+
+    groq_api_key: str
+    groq_model: str = "openai/gpt-oss-120b"
 
     # -------------------------
     # 3. Groq settings

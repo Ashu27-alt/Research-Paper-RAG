@@ -14,12 +14,17 @@ class DocumentResponse(BaseModel):
     document_id: UUID
     filename: str
     file_path: str
+    processing_status: str
     created_at: datetime
 
 
 class DocumentDetailResponse(DocumentResponse):
     """Detailed document response including chunk count."""
-
+    document_id: UUID
+    filename: str
+    file_path: str
+    processing_status: str
+    created_at: datetime
     chunks: int
 
 
@@ -36,4 +41,5 @@ class UploadDocumentResponse(BaseModel):
     document_id: UUID
     filename: str
     file_path: str
+    processing_status: str
     message: str

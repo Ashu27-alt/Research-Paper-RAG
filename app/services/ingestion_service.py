@@ -10,29 +10,33 @@ from app.services.embedding_service import embedding_service
 
 def ingest_document(
     db: Session,
-    file_path: str,
-    filename: str,
+    document: Document,
 ) -> Document:
-    """Create an indexed document from a saved PDF.
+    """Process and index an existing document.
 
     Args:
-        db: Active SQLAlchemy session used for all persistence.
-        file_path: Local path to the PDF that should be ingested.
-        filename: Original file name stored with the document record.
+        db: Active SQLAlchemy session used for persistence.
+        document: Document record containing the saved PDF path.
 
     Returns:
-        The committed ``Document`` ORM object.
+        The completed ``Document`` ORM object.
 
     Raises:
         ValueError: If the PDF yields no chunks or embedding counts disagree.
-        Exception: Any extraction, embedding, or database error after rollback.
+        Exception: Any extraction, embedding, or database error.
     """
 
     try:
-        # Extract PDF
-        pages = extract_text(file_path)
+        # -------------------------
+        # 1. Extract PDF
+        # -------------------------
 
-        # Chunk document
+        pages = extract_text(document.file_path)
+
+        # -------------------------
+        # 2. Chunk document
+        # -------------------------
+
         chunks = chunk_pages(pages)
 
         if not chunks:
@@ -40,8 +44,14 @@ def ingest_document(
                 "No chunks were extracted from the document"
             )
 
-        # Generate embeddings
-        texts = [chunk["text"] for chunk in chunks]
+        # -------------------------
+        # 3. Generate embeddings
+        # -------------------------
+
+        texts = [
+            chunk["text"]
+            for chunk in chunks
+        ]
 
         embeddings = embedding_service.embed_texts(texts)
 
@@ -50,18 +60,14 @@ def ingest_document(
                 "Number of chunks and embeddings do not match"
             )
 
-        # Create document
-        document = Document(
-            filename=filename,
-            file_path=file_path,
-        )
+        # -------------------------
+        # 4. Store chunks
+        # -------------------------
 
-        db.add(document)
-        db.flush()
-
-        # Store chunks + embeddings
-        for chunk, embedding in zip(chunks, embeddings):
-
+        for chunk, embedding in zip(
+            chunks,
+            embeddings,
+        ):
             document_chunk = DocumentChunk(
                 document_id=document.id,
                 page_number=chunk["page_number"],
@@ -72,6 +78,12 @@ def ingest_document(
 
             db.add(document_chunk)
 
+        # -------------------------
+        # 5. Mark completed
+        # -------------------------
+
+        document.processing_status = "completed"
+
         db.commit()
         db.refresh(document)
 
@@ -80,23 +92,3 @@ def ingest_document(
     except Exception:
         db.rollback()
         raise
-
-if __name__ == "__main__":
-    from app.db.database import SessionLocal
-
-    pdf_path = "uploads/imageMAE.pdf"
-
-    db = SessionLocal()
-
-    try:
-        document = ingest_document(
-            db=db,
-            file_path=pdf_path,
-            filename="your_filename.pdf",
-        )
-
-        print("Document ID:", document.id)
-        print("Filename:", document.filename)
-
-    finally:
-        db.close()

@@ -26,6 +26,14 @@ class Document(Base):
     filename = Column(Text, nullable=False)
 
     file_path = Column(Text, nullable=False)
+    
+    processing_status = Column(
+        Text,
+        nullable=False,
+        default="pending",
+        server_default="pending",
+    )
+
 
     created_at = Column(DateTime, server_default=func.now())
 
