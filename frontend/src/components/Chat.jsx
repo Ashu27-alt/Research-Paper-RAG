@@ -4,8 +4,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { askQuestion } from "../api/client";
-import SourceCard from "./SourceCard";
+import { askQuestion } from "../api/client.js";
+import SourceCard from "./SourceCard.jsx";
 
 function Chat() {
   const [question, setQuestion] = useState("");
