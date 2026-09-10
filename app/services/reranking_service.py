@@ -1,72 +1,95 @@
-"""Cross-encoder reranking for vector-retrieval candidates."""
+"""Cross-encoder reranking service used to rank retrieved document chunks."""
 
-from sentence_transformers import CrossEncoder
-
-
-MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 
-class RerankerService:
-    """Load and apply the configured cross-encoder relevance model."""
+MODEL_NAME = "Xenova/ms-marco-MiniLM-L-6-v2"
+
+
+class RerankingService:
+    """Rerank retrieved chunks using a lightweight cross-encoder."""
 
     def __init__(self):
-        """Load the reranking model once for reuse by the application."""
-        self.model = CrossEncoder(MODEL_NAME)
+        """Load the cross-encoder model once for reuse."""
+        self.encoder = TextCrossEncoder(
+            model_name=MODEL_NAME
+        )
 
     def rerank(
         self,
         query: str,
-        results: list,
-        top_k: int = 5,
-    ) -> list:
-        """Rerank retrieved document chunks using a cross-encoder.
+        results: list[dict],
+        top_k: int,
+    ) -> list[dict]:
+        """Rerank retrieved chunks against the user's query.
 
         Args:
-            query: User's search query.
-            results: Results returned by vector retrieval.
-            top_k: Number of final results to return.
+            query: User's natural-language question.
+            results: Vector-search results containing chunks and distances.
+            top_k: Number of highest-ranked results to return.
 
         Returns:
-            Dictionaries containing the chunk, vector distance, and reranker score.
-
-        Raises:
-            ValueError: If ``query`` is empty or only whitespace.
+            Reranked results containing the original chunk,
+            vector distance, and cross-encoder score.
         """
-
         if not query or not query.strip():
             raise ValueError("Query cannot be empty")
 
         if not results:
             return []
 
-        # Create (query, chunk_text) pairs
-        pairs = [
-            (query, result[0].text)
+        if top_k <= 0:
+            return []
+
+        documents = [
+            result["chunk"].text
             for result in results
         ]
 
-        # Calculate cross-encoder relevance scores
-        scores = self.model.predict(pairs)
+        scores = list(
+            self.encoder.rerank(
+                query,
+                documents,
+            )
+        )
 
-        # Attach scores to results
         reranked_results = []
 
         for result, score in zip(results, scores):
-            chunk, distance = result
+            reranked_results.append(
+                {
+                    "chunk": result["chunk"],
+                    "vector_distance": result["distance"],
+                    "rerank_score": float(score),
+                }
+            )
 
-            reranked_results.append({
-                "chunk": chunk,
-                "vector_distance": float(distance),
-                "rerank_score": float(score),
-            })
-
-        # Highest reranker score = most relevant
         reranked_results.sort(
-            key=lambda x: x["rerank_score"],
+            key=lambda result: result["rerank_score"],
             reverse=True,
         )
 
         return reranked_results[:top_k]
 
 
-reranker_service = RerankerService()
+reranker_service = RerankingService()
+
+
+if __name__ == "__main__":
+    service = RerankingService()
+
+    query = "Who is maintaining Qdrant?"
+
+    documents = [
+        "This is built to be faster and lighter than other libraries.",
+        "fastembed is supported by and maintained by Qdrant.",
+    ]
+
+    scores = list(
+        service.encoder.rerank(
+            query,
+            documents,
+        )
+    )
+
+    print("Scores:", scores)

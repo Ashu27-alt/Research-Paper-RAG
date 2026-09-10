@@ -84,3 +84,8 @@ def process_document(
 
     finally:
         db.close()
+        
+@celery_app.task
+def test_task():
+    """Test Celery worker connectivity."""
+    return "Celery worker is working."

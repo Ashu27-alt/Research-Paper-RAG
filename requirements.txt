@@ -4,8 +4,7 @@ python-multipart
 
 pymupdf
 
-sentence-transformers
-torch
+fastembed
 
 sqlalchemy
 psycopg[binary]
