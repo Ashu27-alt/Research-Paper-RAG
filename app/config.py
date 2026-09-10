@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     groq_api_key: str
     groq_model: str = "openai/gpt-oss-120b"
 
+    supabase_url: str
+    supabase_service_role_key: str
+    supabase_storage_bucket: str = "documents"
+
     upload_dir: str = "uploads"
     max_file_size_mb: int = 50
 

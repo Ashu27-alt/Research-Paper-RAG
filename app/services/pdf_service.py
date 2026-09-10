@@ -7,13 +7,11 @@ import uuid
 
 from fastapi import UploadFile, HTTPException
 from app.config import settings
-
-
-UPLOAD_DIR = settings.upload_dir
+from app.services.storage_service import storage_service
 
 
 async def save_pdf(file: UploadFile) -> str:
-    """Validate and safely save an uploaded PDF."""
+    """Validate and upload a PDF to Supabase Storage."""
 
     # -------------------------
     # 1. Validate filename
@@ -38,7 +36,7 @@ async def save_pdf(file: UploadFile) -> str:
     # -------------------------
 
     contents = await file.read()
-    
+
     if not contents.startswith(b"%PDF"):
         raise HTTPException(
             status_code=400,
@@ -57,30 +55,31 @@ async def save_pdf(file: UploadFile) -> str:
         )
 
     # -------------------------
-    # 3. Create safe filename
+    # 3. Create safe storage path
     # -------------------------
 
     stored_filename = f"{uuid.uuid4()}.pdf"
 
-    os.makedirs(
-        settings.upload_dir,
-        exist_ok=True,
-    )
-
-    file_path = os.path.join(
-        settings.upload_dir,
-        stored_filename,
-    )
+    storage_path = stored_filename
 
     # -------------------------
-    # 4. Save file
+    # 4. Upload to Supabase
     # -------------------------
 
-    with open(file_path, "wb") as buffer:
-        buffer.write(contents)
+    try:
+        storage_service.upload_file(
+            file_data=contents,
+            storage_path=storage_path,
+            content_type="application/pdf",
+        )
 
-    return file_path
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload PDF to storage: {str(exc)}",
+        )
 
+    return storage_path
 
 # ---------------------------------------------------------
 # BASIC HELPERS

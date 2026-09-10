@@ -69,4 +69,10 @@ def search_chunks(
         .all()
     )
 
-    return results
+    return [
+        {
+            "chunk": chunk,
+            "distance": float(distance),
+        }
+        for chunk, distance in results
+    ]

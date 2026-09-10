@@ -14,6 +14,7 @@ from app.schemas.documents import (
     UploadDocumentResponse,
 )
 from app.services.pdf_service import save_pdf
+from app.services.storage_service import storage_service
 from app.worker.tasks import process_document
 
 
@@ -47,20 +48,7 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Upload a PDF and queue it for background processing.
-
-    Args:
-        file: Required PDF sent as multipart form data.
-        db: Request-scoped SQLAlchemy session supplied by FastAPI.
-
-    Returns:
-        The stored document ID, filename, processing status,
-        file path, and upload message.
-
-    Raises:
-        HTTPException: 400 for invalid input or 500 if saving
-            the document record fails.
-    """
+    """Upload a PDF and queue it for background processing."""
 
     # -------------------------
     # 1. Validate uploaded file
@@ -79,7 +67,7 @@ async def upload_document(
         )
 
     # -------------------------
-    # 2. Save PDF to disk
+    # 2. Upload PDF to storage
     # -------------------------
 
     file_path = await save_pdf(file=file)
@@ -102,6 +90,12 @@ async def upload_document(
     except Exception:
         db.rollback()
 
+        # Remove uploaded file if database insertion fails.
+        try:
+            storage_service.delete_file(file_path)
+        except Exception:
+            pass
+
         raise HTTPException(
             status_code=500,
             detail="Failed to create document record.",
@@ -118,8 +112,15 @@ async def upload_document(
 
     except Exception:
         document.processing_status = "failed"
-
         db.commit()
+
+        # Remove file because processing could not be queued.
+        try:
+            storage_service.delete_file(
+                document.file_path
+            )
+        except Exception:
+            pass
 
         raise HTTPException(
             status_code=500,
@@ -146,29 +147,13 @@ async def upload_document(
 def list_documents(
     db: Session = Depends(get_db),
 ):
-    """List all documents, newest first.
-
-    Args:
-        db: Request-scoped SQLAlchemy session.
-
-    Returns:
-        Document IDs, filenames, storage paths, processing statuses,
-        and creation timestamps.
-    """
-
-    # -------------------------
-    # 1. Fetch documents
-    # -------------------------
+    """List all documents, newest first."""
 
     documents = (
         db.query(Document)
         .order_by(Document.created_at.desc())
         .all()
     )
-
-    # -------------------------
-    # 2. Return document list
-    # -------------------------
 
     return [
         serialize_document(document)
@@ -184,22 +169,7 @@ def get_document(
     document_id: UUID,
     db: Session = Depends(get_db),
 ):
-    """Get metadata for one document.
-
-    Args:
-        document_id: UUID of the document to retrieve.
-        db: Request-scoped SQLAlchemy session.
-
-    Returns:
-        Document metadata, processing status, and chunk count.
-
-    Raises:
-        HTTPException: 404 when no document matches ``document_id``.
-    """
-
-    # -------------------------
-    # 1. Find document
-    # -------------------------
+    """Get metadata for one document."""
 
     document = (
         db.query(Document)
@@ -212,10 +182,6 @@ def get_document(
             status_code=404,
             detail="Document not found.",
         )
-
-    # -------------------------
-    # 2. Return document details
-    # -------------------------
 
     return {
         **serialize_document(document),
@@ -231,18 +197,7 @@ def delete_document(
     document_id: UUID,
     db: Session = Depends(get_db),
 ):
-    """Delete a document and its indexed chunks.
-
-    Args:
-        document_id: UUID of the document to delete.
-        db: Request-scoped SQLAlchemy session.
-
-    Returns:
-        A confirmation message and the deleted document ID.
-
-    Raises:
-        HTTPException: 404 when no document matches ``document_id``.
-    """
+    """Delete a document, its chunks, and its stored PDF."""
 
     # -------------------------
     # 1. Find document
@@ -260,15 +215,35 @@ def delete_document(
             detail="Document not found.",
         )
 
+    storage_path = document.file_path
+
     # -------------------------
-    # 2. Delete document
+    # 2. Delete PDF from storage
+    # -------------------------
+
+    try:
+        storage_service.delete_file(
+            storage_path
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete stored PDF: {str(exc)}",
+        )
+
+    # -------------------------
+    # 3. Delete database record
     # -------------------------
 
     db.delete(document)
     db.commit()
 
+    # ``DocumentChunk`` rows are automatically
+    # deleted because of the CASCADE relationship.
+
     # -------------------------
-    # 3. Return confirmation
+    # 4. Return confirmation
     # -------------------------
 
     return {
